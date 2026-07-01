@@ -117,7 +117,7 @@ export interface SplashHandle {
 
 /** Minimal bridge interface needed for splash (subset of EvenHubBridge). */
 export interface SplashBridge {
-  showHomePage: (menuText: string, imageTiles?: { id: number; name: string; x: number; y: number; w: number; h: number }[]) => Promise<void>;
+  showMainPage: (menuText: string, imageTiles?: { id: number; name: string; x: number; y: number; w: number; h: number }[]) => Promise<void>;
   sendImage: (containerId: number, containerName: string, pngBytes: Uint8Array) => Promise<void>;
 }
 
@@ -246,7 +246,7 @@ export function createSplash(config: SplashConfig): SplashHandle {
       const imageTiles = encodedTiles
         .filter((_, i) => i < tileCount)
         .map(t => ({ id: t.id, name: t.name, x: t.x, y: t.y, w: t.w, h: t.h }));
-      await bridge.showHomePage(menuText, imageTiles);
+      await bridge.showMainPage(menuText, imageTiles);
 
       // Send only the app tiles (not black padding tiles)
       for (let i = 0; i < tileCount; i++) {

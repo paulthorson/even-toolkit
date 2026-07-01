@@ -37,8 +37,8 @@ export const TILE_2: TileSlot = {
 
 export const TILE_3: TileSlot = {
   id: 4, name: 'tile-3',
-  x: 400, y: 0, w: G2_IMAGE_MAX_W, h: G2_IMAGE_MAX_H,
-  crop: { sx: 400, sy: 0, sw: 176, sh: 100 },
+  x: 400, y: 0, w: DISPLAY_W - 400, h: G2_IMAGE_MAX_H,
+  crop: { sx: 400, sy: 0, sw: DISPLAY_W - 400, sh: 100 },
 };
 
 export const IMAGE_TILES = [TILE_1, TILE_2, TILE_3];
@@ -89,6 +89,15 @@ export const CHART_TEXT = {
   y: G2_IMAGE_MAX_H,
   w: DISPLAY_W,
   h: DISPLAY_H - G2_IMAGE_MAX_H,
+};
+
+export const CHART_SCROLL = {
+  id: 6,
+  name: 'scroll-capture',
+  x: 0,
+  y: 0,
+  w: DISPLAY_W,
+  h: DISPLAY_H,
 };
 
 // ── Default column positions for 3-column layout (apps can override) ──

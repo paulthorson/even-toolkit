@@ -15,6 +15,43 @@ export interface EncodedTile {
   hash: number;
 }
 
+export interface EncodeOptions {
+  /** Enable Floyd-Steinberg dithering for better greyscale quality on photos/gradients. Default false. */
+  dither?: boolean;
+}
+
+// ── Pre-computed 256-entry LUT: input luminance → quantized 16-level grey value ──
+const GREY_LUT = new Uint8Array(256);
+for (let i = 0; i < 256; i++) {
+  const idx = Math.min(15, Math.round(i / 17));
+  GREY_LUT[i] = idx * 17;
+}
+
+/**
+ * Floyd-Steinberg dithering: distributes quantization error to neighboring pixels
+ * for much better greyscale quality on photos and gradients.
+ * Operates on a flat luminance array (one byte per pixel), modifies in-place.
+ */
+function floydSteinbergDither(lum: Float32Array, w: number, h: number): void {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const oldVal = lum[i]!;
+      const newVal = GREY_LUT[Math.max(0, Math.min(255, Math.round(oldVal)))]!;
+      lum[i] = newVal;
+      const err = oldVal - newVal;
+
+      // Distribute error: 7/16 right, 3/16 below-left, 5/16 below, 1/16 below-right
+      if (x + 1 < w) lum[i + 1] += err * (7 / 16);
+      if (y + 1 < h) {
+        if (x > 0) lum[(y + 1) * w + (x - 1)] += err * (3 / 16);
+        lum[(y + 1) * w + x] += err * (5 / 16);
+        if (x + 1 < w) lum[(y + 1) * w + (x + 1)] += err * (1 / 16);
+      }
+    }
+  }
+}
+
 // Cache tile canvases
 const tileCanvasCache = new Map<string, { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D }>();
 
@@ -47,6 +84,7 @@ function encodeTile(
   sx: number, sy: number, sw: number, sh: number,
   tw: number, th: number,
   key: string,
+  options?: EncodeOptions,
 ): EncodedTile {
   const ctx = getTileCtx(key, tw, th);
   ctx.fillStyle = '#000000';
@@ -58,14 +96,29 @@ function encodeTile(
   const pixels = imgData.data;
   const pc = tw * th;
 
-  // Quantize to 16-level greyscale for 4-bit indexed PNG
   const buf = getRgbaBuf(pc * 4);
-  for (let i = 0; i < pc; i++) {
-    const si = i * 4;
-    const lum = Math.round(0.299 * pixels[si]! + 0.587 * pixels[si + 1]! + 0.114 * pixels[si + 2]!);
-    const idx = Math.min(15, Math.round(lum / 17));
-    const v = idx * 17;
-    buf[si] = v; buf[si + 1] = v; buf[si + 2] = v; buf[si + 3] = 255;
+
+  if (options?.dither) {
+    // Floyd-Steinberg dithering path: compute luminance, dither, then write output
+    const lum = new Float32Array(pc);
+    for (let i = 0; i < pc; i++) {
+      const si = i * 4;
+      lum[i] = 0.299 * pixels[si]! + 0.587 * pixels[si + 1]! + 0.114 * pixels[si + 2]!;
+    }
+    floydSteinbergDither(lum, tw, th);
+    for (let i = 0; i < pc; i++) {
+      const si = i * 4;
+      const v = Math.max(0, Math.min(255, Math.round(lum[i]!)));
+      buf[si] = v; buf[si + 1] = v; buf[si + 2] = v; buf[si + 3] = 255;
+    }
+  } else {
+    // Fast LUT-based quantization (default for charts / clean lines)
+    for (let i = 0; i < pc; i++) {
+      const si = i * 4;
+      const lum = Math.round(0.299 * pixels[si]! + 0.587 * pixels[si + 1]! + 0.114 * pixels[si + 2]!);
+      const v = GREY_LUT[Math.max(0, Math.min(255, lum))]!;
+      buf[si] = v; buf[si + 1] = v; buf[si + 2] = v; buf[si + 3] = 255;
+    }
   }
 
   // 16-color indexed PNG
@@ -79,9 +132,10 @@ export function encodeTilesBatch(
   canvas: HTMLCanvasElement,
   tiles: Array<{ crop: { sx: number; sy: number; sw: number; sh: number }; name: string }>,
   tw: number, th: number,
+  options?: EncodeOptions,
 ): EncodedTile[] {
   return tiles.map((tile) =>
-    encodeTile(canvas, tile.crop.sx, tile.crop.sy, tile.crop.sw, tile.crop.sh, tw, th, tile.name)
+    encodeTile(canvas, tile.crop.sx, tile.crop.sy, tile.crop.sw, tile.crop.sh, tw, th, tile.name, options)
   );
 }
 

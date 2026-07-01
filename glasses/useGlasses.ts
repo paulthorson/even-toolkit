@@ -64,6 +64,8 @@ import { mapGlassEvent } from './action-map';
 import { bindKeyboard } from './keyboard';
 import { activateKeepAlive, deactivateKeepAlive } from './keep-alive';
 import type { SplashHandle } from './splash';
+import type { VoiceRoute, VoiceAction, VoiceDisplayState, VoiceLayerState } from '../voice/types';
+import type { VoiceLayer as VoiceLayerType } from '../voice/voice-layer';
 
 /** Debug overlay — only shows if window.__glassesDebug is true */
 function showDebugOverlay(msg: string): void {
@@ -80,10 +82,12 @@ export interface UseGlassesConfig<S> {
   /** Convert snapshot to split-pane data (for 'split' mode) — optional */
   toSplit?: (snapshot: S, nav: GlassNavState) => SplitData;
   onGlassAction: (action: GlassAction, nav: GlassNavState, snapshot: S) => GlassNavState;
+  /** Called whenever the internal glasses nav state changes. */
+  onNavChange?: (nav: GlassNavState) => void;
   deriveScreen: (path: string) => string;
   appName: string;
-  /** Page mode per screen — return 'text', 'columns', 'split', or 'home'. Default: 'text' */
-  getPageMode?: (screen: string) => 'text' | 'columns' | 'split' | 'home';
+  /** Page mode per screen — return 'text', 'columns', 'split', or 'main'. Default: 'text' */
+  getPageMode?: (screen: string) => 'text' | 'columns' | 'split' | 'main';
   /**
    * When true (default), a double click on a home/root glasses screen
    * opens the native Even Hub shutdown container instead of routing GO_BACK
@@ -96,8 +100,8 @@ export interface UseGlassesConfig<S> {
   headerClock?: boolean;
   /** Column layout config — default: 3 equal columns across 576px */
   columns?: ColumnConfig[];
-  /** Home page image tiles — sent when getPageMode returns 'home'. Create with createSplash().getTiles() */
-  homeImageTiles?: { id: number; name: string; bytes: Uint8Array; x: number; y: number; w: number; h: number }[];
+  /** Main page image tiles — sent when getPageMode returns 'main'. Create with createSplash().getTiles() */
+  mainImageTiles?: { id: number; name: string; bytes: Uint8Array; x: number; y: number; w: number; h: number }[];
   /**
    * Optional image-based splash screen.
    * When provided, shows the splash image instead of the default text splash,
@@ -105,6 +109,29 @@ export interface UseGlassesConfig<S> {
    * Create with `createSplash()` from 'even-toolkit/splash'.
    */
   splash?: SplashHandle;
+  /**
+   * Optional voice interaction configuration.
+   * When provided, enables STT-driven navigation and/or content rendering.
+   * The VoiceLayer is created lazily after the bridge initializes.
+   */
+  voice?: {
+    /** STT engine config */
+    stt: { provider: string; apiKey: string; language?: string; source?: 'microphone' | 'glass-bridge' };
+    /** Voice-navigable routes (omit to disable voice navigation) */
+    routes?: VoiceRoute[];
+    /** Voice actions — functions callable by voice without navigation */
+    actions?: VoiceAction[];
+    /** LLM config for voice-render and/or LLM intent fallback */
+    llm?: { provider: string; model: string; apiKey: string; systemContext?: string };
+    /** Callback when voice render produces a display state */
+    onVoiceDisplay?(state: VoiceDisplayState): void;
+    /** Callback for voice layer state changes */
+    onVoiceStateChange?(state: VoiceLayerState): void;
+    /** Callback for interim transcripts */
+    onVoiceTranscript?(text: string, isFinal: boolean): void;
+    /** How to activate voice: 'manual' (default) = app calls startVoice explicitly */
+    activation?: 'manual';
+  };
 }
 
 export function useGlasses<S>(config: UseGlassesConfig<S>): void {
@@ -121,12 +148,18 @@ export function useGlasses<S>(config: UseGlassesConfig<S>): void {
   const configRef = useRef(config);
   configRef.current = config;
   const lastHadImagesRef = useRef(false);
+  const voiceLayerRef = useRef<VoiceLayerType | null>(null);
 
   // ── Separate busy flags for text and image pipelines ──
   // Text updates (lightweight) never block on image sends (heavy/can stall when backgrounded)
   const textBusyRef = useRef(false);
   const textPendingRef = useRef(false);
   const imgBusyRef = useRef(false);
+
+  const setNav = useCallback((nav: GlassNavState) => {
+    navRef.current = nav;
+    configRef.current.onNavChange?.(nav);
+  }, []);
 
   // ── Text pipeline: layout setup + text content ──
   const sendText = useCallback(async () => {
@@ -164,15 +197,15 @@ export function useGlasses<S>(config: UseGlassesConfig<S>): void {
         const data = clock ? injectClockText(rawData, clock) : rawData;
         const text = renderTextPageLines(data.lines);
 
-        const tiles = mode === 'home' ? configRef.current.homeImageTiles : undefined;
+        const tiles = mode === 'main' ? configRef.current.mainImageTiles : undefined;
         const imageTiles = tiles?.map(t => ({ id: t.id, name: t.name, x: t.x, y: t.y, w: t.w, h: t.h }));
         const hasImages = !!imageTiles?.length;
-        const needsRebuild = hub.currentMode !== 'home' || hasImages !== lastHadImagesRef.current;
+        const needsRebuild = hub.currentMode !== 'main' || hasImages !== lastHadImagesRef.current;
 
         if (!needsRebuild) {
-          await hub.updateHomeText(text);
+          await hub.updateMainText(text);
         } else {
-          await hub.showHomePage(text, imageTiles);
+          await hub.showMainPage(text, imageTiles);
           // Send images in a SEPARATE pipeline — don't block text
           if (tiles) {
             sendImages(tiles);
@@ -221,7 +254,7 @@ export function useGlasses<S>(config: UseGlassesConfig<S>): void {
 
     const nav = navRef.current;
     const getMode = configRef.current.getPageMode ?? (() => 'text');
-    if (getMode(nav.screen) !== 'home') return false;
+    if (getMode(nav.screen) !== 'main') return false;
 
     const hub = hubRef.current;
     if (!hub) return false;
@@ -234,19 +267,19 @@ export function useGlasses<S>(config: UseGlassesConfig<S>): void {
       if (await maybeHandleHomeShutdown(action)) return;
       const snapshot = configRef.current.getSnapshot();
       const newNav = configRef.current.onGlassAction(action, navRef.current, snapshot);
-      navRef.current = newNav;
+      setNav(newNav);
       flushDisplay();
     })();
-  }, [flushDisplay, maybeHandleHomeShutdown]);
+  }, [flushDisplay, maybeHandleHomeShutdown, setNav]);
 
   // Update screen from URL changes
   useEffect(() => {
     const newScreen = configRef.current.deriveScreen(location.pathname);
     if (newScreen !== navRef.current.screen) {
-      navRef.current = { highlightedIndex: 0, screen: newScreen };
+      setNav({ highlightedIndex: 0, screen: newScreen });
       flushDisplay();
     }
-  }, [location.pathname, flushDisplay]);
+  }, [location.pathname, flushDisplay, setNav]);
 
   // Initialize bridge, keyboard, keep-alive, and polling
   useEffect(() => {
@@ -256,10 +289,10 @@ export function useGlasses<S>(config: UseGlassesConfig<S>): void {
     const hub = new EvenHubBridge(configRef.current.columns);
     hubRef.current = hub;
 
-    navRef.current = {
+    setNav({
       highlightedIndex: 0,
       screen: configRef.current.deriveScreen(location.pathname),
-    };
+    });
 
     async function initBridge() {
       showDebugOverlay('initBridge: starting...');
@@ -290,8 +323,8 @@ export function useGlasses<S>(config: UseGlassesConfig<S>): void {
           await splash.clearExtras(hub);
 
           // Splash already set up the home layout — mark it so first render
-          // uses updateHomeText instead of rebuilding (avoids blink)
-          lastHadImagesRef.current = !!configRef.current.homeImageTiles?.length;
+          // uses updateMainText instead of rebuilding (avoids blink)
+          lastHadImagesRef.current = !!configRef.current.mainImageTiles?.length;
         } else {
           showDebugOverlay('initBridge: no splash, showing text...');
           await hub.showTextPage(`\n\n      ${configRef.current.appName}`);
@@ -320,6 +353,39 @@ export function useGlasses<S>(config: UseGlassesConfig<S>): void {
             flushDisplay();
           }
         }, 100);
+
+        // Initialize voice layer (lazy import to keep tree-shakeable)
+        if (configRef.current.voice && !voiceLayerRef.current) {
+          const voiceCfg = configRef.current.voice;
+          import('../voice/voice-layer').then(({ VoiceLayer }) => {
+            if (disposed || voiceLayerRef.current) return;
+            voiceLayerRef.current = new VoiceLayer({
+              stt: voiceCfg.stt,
+              nav: voiceCfg.routes ? {
+                routes: voiceCfg.routes,
+                navigate: (path: string) => navigateRef.current(path),
+              } : undefined,
+              actions: voiceCfg.actions,
+              render: voiceCfg.llm ? {
+                llmProvider: voiceCfg.llm.provider,
+                llmModel: voiceCfg.llm.model,
+                llmApiKey: voiceCfg.llm.apiKey,
+                systemContext: voiceCfg.llm.systemContext,
+                onDisplayState: (state) => voiceCfg.onVoiceDisplay?.(state),
+              } : undefined,
+              onTranscript: (text, isFinal) => {
+                voiceCfg.onVoiceTranscript?.(text, isFinal);
+                flushDisplay();
+              },
+              onStateChange: (state) => {
+                voiceCfg.onVoiceStateChange?.(state);
+                flushDisplay();
+              },
+            });
+          }).catch(() => {
+            // Voice module not available — app continues without voice
+          });
+        }
       }
     }
 
@@ -332,6 +398,10 @@ export function useGlasses<S>(config: UseGlassesConfig<S>): void {
       disposed = true;
       if (pollTimer) clearInterval(pollTimer);
       unbindKeyboard();
+      if (voiceLayerRef.current) {
+        voiceLayerRef.current.dispose();
+        voiceLayerRef.current = null;
+      }
       hub.dispose();
       hubRef.current = null;
       (window as any).__evenBridge = null;

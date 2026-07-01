@@ -15,3 +15,4 @@ export * from './glass-router';
 export * from './glass-screen-router';
 export * from './glass-format';
 export * from './glass-chat-display';
+export * from './device';

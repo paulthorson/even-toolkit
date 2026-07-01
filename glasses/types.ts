@@ -14,6 +14,7 @@ export interface DisplayData {
 
 export const GLASSES_TEXT_PREFIX = '  ';
 export const GLASSES_SEPARATOR_WIDTH = 27;
+export const GLASSES_TEXT_MAX_CHARS = 64;
 
 export function line(text: string, style: LineStyle = 'normal', inverted = false): DisplayLine {
   return { text, inverted, style };
@@ -59,6 +60,8 @@ export interface ColumnData {
 export interface SplitLayout {
   /** Full-width header height in pixels */
   headerHeight?: number;
+  /** Top Y position for content panes; defaults to headerHeight */
+  paneY?: number;
   /** Left pane width in pixels (2-pane mode) */
   leftWidth?: number;
   /** Right pane width in pixels; defaults to remaining width (2-pane mode) */
@@ -91,7 +94,7 @@ export type PageMode =
   | 'text'      // single full-screen text container (settings, simple screens)
   | 'columns'   // multiple side-by-side text containers (watchlist, tables)
   | 'split'     // fixed top header + two bottom panes
-  | 'home'      // image tile + text + empty overlay (home screens)
+  | 'main'      // image tile + text + empty overlay (main content page)
   | 'chart';    // 3 image tiles + text (chart detail)
 
 // ── Launch source ──
@@ -108,12 +111,13 @@ export interface IMUData {
 
 // ── Glass action types ──
 
-export type GlassActionType = 'HIGHLIGHT_MOVE' | 'SELECT_HIGHLIGHTED' | 'GO_BACK';
+export type GlassActionType = 'HIGHLIGHT_MOVE' | 'SELECT_HIGHLIGHTED' | 'GO_BACK' | 'VOICE_COMMAND';
 
 export type GlassAction =
   | { type: 'HIGHLIGHT_MOVE'; direction: 'up' | 'down' }
   | { type: 'SELECT_HIGHLIGHTED' }
-  | { type: 'GO_BACK' };
+  | { type: 'GO_BACK' }
+  | { type: 'VOICE_COMMAND'; transcript: string; intent: import('../voice/types').VoiceIntent };
 
 export interface GlassNavState {
   highlightedIndex: number;

@@ -148,6 +148,12 @@ wrapIndex(current, 'down', count)    // (current + 1) % count
 import {
   buildScrollableList,
   buildScrollableContent,
+  buildSplitTable,
+  buildScrollableSplitPanes,
+  buildImageTileTextDisplay,
+  calcSplitTableMaxScroll,
+  calcScrollableSplitPanesMaxScroll,
+  calcImageTileTextMaxScroll,
   slidingWindowStart,
   G2_TEXT_LINES,          // 10
   DEFAULT_CONTENT_SLOTS,  // 7 (below glassHeader)
@@ -168,6 +174,25 @@ const display = buildScrollableContent({
   contentLines: ['Line 1', 'Line 2', ...],
   scrollPos: nav.highlightedIndex,
 });
+
+// G2-aligned split table: fixed header container, body starts at y=60,
+// bottom scroll indicator gets its own row.
+const table = buildSplitTable({
+  title: 'WEATHER WEEK',
+  actionBar: buildStaticActionBar(['Ask', 'Scroll'], 1),
+  columns: [
+    { header: 'Day', values: ['Mon 24', 'Tue 25'] },
+    { header: 'Hi', values: ['28', '30'], align: 'right' },
+    { header: 'Lo', values: ['18', '20'], align: 'right' },
+    { header: 'Sky', values: ['Sun', 'Sun'] },
+  ],
+  scrollPos,
+});
+
+// Multi-pane detail pages and image/chart text pages share the same windowing
+// rules, so scroll bounds can be calculated with the matching helper.
+const detailMaxScroll = calcScrollableSplitPanesMaxScroll(detailPanes);
+const chartText = buildImageTileTextDisplay({ title: 'SALES Q4', actionBar, contentLines, scrollPos });
 ```
 
 ### Mode Encoding (`glass-mode`)

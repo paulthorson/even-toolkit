@@ -8,7 +8,7 @@ import {
   type EvenAppBridge,
   type EvenHubEvent,
 } from '@evenrealities/even_hub_sdk';
-import { DISPLAY_W, DISPLAY_H, CHART_TEXT, IMAGE_TILES, SPLIT_HEADER, SPLIT_LEFT, SPLIT_RIGHT } from './layout';
+import { DISPLAY_W, DISPLAY_H, CHART_TEXT, CHART_SCROLL, IMAGE_TILES, SPLIT_HEADER, SPLIT_LEFT, SPLIT_RIGHT } from './layout';
 import type { PageMode, SplitLayout } from './types';
 import { notifyTextUpdate } from './gestures';
 
@@ -44,6 +44,8 @@ export class EvenHubBridge {
   private splitLeft!: GlassesTextElement;
   private splitRight!: GlassesTextElement;
   private lastSplitLayoutKey: string | null = null;
+  private _lastMainText: string | null = null;
+  private _lastChartText: string | null = null;
 
   // Chart dummy (for SDK state tracking before raw bridge chart/home)
   private chartDummyPage!: GlassesPage;
@@ -77,7 +79,7 @@ export class EvenHubBridge {
       .setPosition(p => p.setX(0).setY(0))
       .setSize(s => s.setWidth(DISPLAY_W).setHeight(DISPLAY_H));
 
-    // ── Column page: empty overlay + N column text elements (max 3 columns + overlay = 4 containers) ──
+    // ── Column page: overlay + N column text elements ──
     this.columnPage = this.sdk.createPage('columns');
     const colOverlay = noBorder(this.columnPage.addTextElement(''));
     colOverlay
@@ -185,22 +187,33 @@ export class EvenHubBridge {
 
   // ── Split page (header + two-pane layout) ──
 
-  private resolveSplitLayout(layout?: SplitLayout): {
+  private resolveSplitLayout(layout?: SplitLayout, paneCount = 2): {
     headerHeight: number;
+    paneY: number;
     paneWidths: number[];
     key: string;
   } {
     const headerHeight = Math.max(40, Math.min(DISPLAY_H - 80, layout?.headerHeight ?? SPLIT_HEADER.h));
+    const paneY = Math.max(40, Math.min(DISPLAY_H - 40, layout?.paneY ?? headerHeight));
 
     if (layout?.paneWidths && layout.paneWidths.length > 0) {
-      return { headerHeight, paneWidths: layout.paneWidths, key: `${headerHeight}:${layout.paneWidths.join(',')}` };
+      return { headerHeight, paneY, paneWidths: layout.paneWidths, key: `${headerHeight}:${paneY}:${layout.paneWidths.join(',')}` };
+    }
+
+    // N-pane auto-divide: split evenly when no explicit widths
+    if (paneCount > 2) {
+      const w = Math.floor(DISPLAY_W / paneCount);
+      const widths = Array.from({ length: paneCount }, (_, i) =>
+        i === paneCount - 1 ? DISPLAY_W - w * (paneCount - 1) : w
+      );
+      return { headerHeight, paneY, paneWidths: widths, key: `${headerHeight}:${paneY}:auto${paneCount}` };
     }
 
     // Legacy 2-pane mode
     const requestedLeft = layout?.leftWidth ?? (layout?.rightWidth ? DISPLAY_W - layout.rightWidth : SPLIT_LEFT.w);
     const leftWidth = Math.max(100, Math.min(DISPLAY_W - 100, requestedLeft));
     const rightWidth = DISPLAY_W - leftWidth;
-    return { headerHeight, paneWidths: [leftWidth, rightWidth], key: `${headerHeight}:${leftWidth}` };
+    return { headerHeight, paneY, paneWidths: [leftWidth, rightWidth], key: `${headerHeight}:${paneY}:${leftWidth}` };
   }
 
   /**
@@ -221,7 +234,7 @@ export class EvenHubBridge {
       resolvedLayout = layout;
     }
 
-    const resolved = this.resolveSplitLayout(resolvedLayout);
+    const resolved = this.resolveSplitLayout(resolvedLayout, panes.length);
 
     if (this.rawBridge) {
       await this.sdk.renderPage(this.chartDummyPage);
@@ -246,8 +259,8 @@ export class EvenHubBridge {
         const w = resolved.paneWidths[i] ?? Math.floor(DISPLAY_W / panes.length);
         textObjects.push(new TextContainerProperty({
           containerID: 7 + i, containerName: `split-pane-${i}`,
-          xPosition: xOffset, yPosition: resolved.headerHeight,
-          width: w, height: DISPLAY_H - resolved.headerHeight,
+          xPosition: xOffset, yPosition: resolved.paneY,
+          width: w, height: DISPLAY_H - resolved.paneY,
           borderWidth: 0, borderColor: 0, paddingLength: 6,
           content: panes[i] ?? '', isEventCapture: 0,
         }));
@@ -270,11 +283,11 @@ export class EvenHubBridge {
     this.splitHeader.setPosition((p) => p.setX(0).setY(0));
     this.splitHeader.setSize((s) => s.setWidth(DISPLAY_W).setHeight(resolved.headerHeight));
     this.splitHeader.setBorder((b) => b.setWidth(0).setColor('0').setRadius(0));
-    this.splitLeft.setPosition((p) => p.setX(0).setY(resolved.headerHeight));
-    this.splitLeft.setSize((s) => s.setWidth(resolved.paneWidths[0] ?? SPLIT_LEFT.w).setHeight(DISPLAY_H - resolved.headerHeight));
+    this.splitLeft.setPosition((p) => p.setX(0).setY(resolved.paneY));
+    this.splitLeft.setSize((s) => s.setWidth(resolved.paneWidths[0] ?? SPLIT_LEFT.w).setHeight(DISPLAY_H - resolved.paneY));
     this.splitLeft.setBorder((b) => b.setWidth(0).setColor('0').setRadius(0));
-    this.splitRight.setPosition((p) => p.setX(resolved.paneWidths[0] ?? SPLIT_LEFT.w).setY(resolved.headerHeight));
-    this.splitRight.setSize((s) => s.setWidth(resolved.paneWidths[1] ?? SPLIT_RIGHT.w).setHeight(DISPLAY_H - resolved.headerHeight));
+    this.splitRight.setPosition((p) => p.setX(resolved.paneWidths[0] ?? SPLIT_LEFT.w).setY(resolved.paneY));
+    this.splitRight.setSize((s) => s.setWidth(resolved.paneWidths[1] ?? SPLIT_RIGHT.w).setHeight(DISPLAY_H - resolved.paneY));
     this.splitRight.setBorder((b) => b.setWidth(0).setColor('0').setRadius(0));
     this.splitHeader.setContent(header);
     this.splitLeft.setContent(panes[0] ?? '');
@@ -298,7 +311,7 @@ export class EvenHubBridge {
     }
 
     if (this.rawBridge) {
-      const resolved = this.resolveSplitLayout(resolvedLayout);
+      const resolved = this.resolveSplitLayout(resolvedLayout, panes.length);
       if (this._currentMode !== 'split' || this.lastSplitLayoutKey !== resolved.key) {
         await this.showSplitPage(header, leftOrPanes, rightOrLayout, layout);
         return;
@@ -362,17 +375,17 @@ export class EvenHubBridge {
     await this.updateText(text);
   }
 
-  // ── Home page (N images + empty overlay + menu text containers, no bounce) ──
+  // ── Main page (N images + empty overlay + menu text containers, no bounce) ──
 
-  async switchToHomeLayout(menuText: string, imageTiles?: { id: number; name: string; x: number; y: number; w: number; h: number }[]): Promise<boolean> {
+  async switchToMainLayout(menuText: string, imageTiles?: { id: number; name: string; x: number; y: number; w: number; h: number }[]): Promise<boolean> {
     if (!this.rawBridge || !this._pageReady) return false;
     try {
-      await this.showHomePage(menuText, imageTiles);
+      await this.showMainPage(menuText, imageTiles);
       return true;
     } catch { return false; }
   }
 
-  async showHomePage(menuText: string, imageTiles?: { id: number; name: string; x: number; y: number; w: number; h: number }[]): Promise<void> {
+  async showMainPage(menuText: string, imageTiles?: { id: number; name: string; x: number; y: number; w: number; h: number }[]): Promise<void> {
     if (!this.rawBridge || !this._pageReady) return;
     await this.sdk.renderPage(this.chartDummyPage);
 
@@ -407,11 +420,14 @@ export class EvenHubBridge {
         ),
       }),
     );
-    this._currentMode = 'home';
+    this._currentMode = 'main';
+    this._lastMainText = menuText;
   }
 
-  async updateHomeText(content: string): Promise<void> {
-    if (!this.rawBridge || !this._pageReady || this._currentMode !== 'home') return;
+  async updateMainText(content: string): Promise<void> {
+    if (!this.rawBridge || !this._pageReady || this._currentMode !== 'main') return;
+    if (content === this._lastMainText) return;
+    this._lastMainText = content;
     notifyTextUpdate();
     await this.rawBridge.textContainerUpgrade(
       new TextContainerUpgrade({
@@ -421,7 +437,7 @@ export class EvenHubBridge {
     );
   }
 
-  // ── Chart page (3 image tiles + 1 text = 4 containers) ──
+  // ── Chart page (scroll-capture + chart-text + 3 image tiles = 5 containers) ──
 
   async switchToChartLayout(topText: string): Promise<boolean> {
     if (!this.rawBridge || !this._pageReady) return false;
@@ -441,8 +457,9 @@ export class EvenHubBridge {
         containerTotalNum: 2 + IMAGE_TILES.length,
         textObject: [
           new TextContainerProperty({
-            containerID: 1, containerName: 'overlay',
-            xPosition: 0, yPosition: 0, width: DISPLAY_W, height: DISPLAY_H,
+            containerID: CHART_SCROLL.id, containerName: CHART_SCROLL.name,
+            xPosition: CHART_SCROLL.x, yPosition: CHART_SCROLL.y,
+            width: CHART_SCROLL.w, height: CHART_SCROLL.h,
             borderWidth: 0, borderColor: 0, paddingLength: 0,
             content: '', isEventCapture: 1,
           }),
@@ -463,10 +480,13 @@ export class EvenHubBridge {
       }),
     );
     this._currentMode = 'chart';
+    this._lastChartText = topText;
   }
 
   async updateChartText(content: string): Promise<void> {
     if (!this.rawBridge || !this._pageReady || this._currentMode !== 'chart') return;
+    if (content === this._lastChartText) return;
+    this._lastChartText = content;
     notifyTextUpdate();
     await this.rawBridge.textContainerUpgrade(
       new TextContainerUpgrade({

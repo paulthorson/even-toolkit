@@ -12,7 +12,7 @@
  */
 
 import type { DisplayData, DisplayLine } from './types';
-import { line, glassHeader } from './types';
+import { line, glassHeader, GLASSES_TEXT_MAX_CHARS } from './types';
 import { applyScrollIndicators } from './text-utils';
 
 export interface ChatLine {
@@ -24,7 +24,7 @@ export interface ChatLine {
  * Format a single ChatLine into one or more display strings,
  * word-wrapping at maxChars.
  */
-export function formatChatLine(chatLine: ChatLine, maxChars = 44): string[] {
+export function formatChatLine(chatLine: ChatLine, maxChars = GLASSES_TEXT_MAX_CHARS): string[] {
   const { type, text } = chatLine;
 
   let prefix: string;
@@ -98,7 +98,7 @@ export interface ChatDisplayOptions {
   scrollOffset: number;
   /** Number of visible content lines. Default: 7 (10 total - 3 header) */
   contentSlots?: number;
-  /** Max chars per line. Default: 44 */
+  /** Max chars per line. Default: GLASSES_TEXT_MAX_CHARS */
   maxChars?: number;
 }
 
@@ -114,7 +114,7 @@ export function buildChatDisplay(opts: ChatDisplayOptions): DisplayData {
     chatLines,
     scrollOffset,
     contentSlots = 7,
-    maxChars = 44,
+    maxChars = GLASSES_TEXT_MAX_CHARS,
   } = opts;
 
   const lines = [...glassHeader(title, actionBar)];

@@ -4,6 +4,8 @@
  * Inspired by tesla-even-g2 formatting patterns.
  */
 
+import { GLASSES_TEXT_MAX_CHARS } from './types';
+
 /** Middle dot · field separator */
 export const SEP = '\u00B7';
 
@@ -51,7 +53,7 @@ export function progressBar(percent: number, width = 10): string {
  *
  * @example kvLine('Language', 'EN') → "Language · EN"
  */
-export function kvLine(label: string, value: string, maxWidth = 44): string {
+export function kvLine(label: string, value: string, maxWidth = GLASSES_TEXT_MAX_CHARS): string {
   const sep = ` ${SEP} `;
   const available = maxWidth - label.length - sep.length;
   const val = value.length > available ? value.slice(0, available - 1) + '~' : value;
