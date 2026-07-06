@@ -2,7 +2,7 @@
   "name": "even-toolkit",
   "version": "1.7.8",
   "bin": {
-    "even-toolkit": "./bin/create.js"
+    "even-toolkit": "bin/create.js"
   },
   "description": "Design system & component library for Even Realities G2 smart glasses apps — 55+ web components, 191 pixel-art icons, glasses SDK bridge, pixel-accurate text measurement, and design tokens.",
   "type": "module",
@@ -449,7 +449,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "react": "^19.0.0",
-    "react-router": "^7.0.0",
+    "react-router": "^7.15.1",
     "tailwind-merge": "^3.5.0",
     "typescript": "~5.4.0"
   },
@@ -467,7 +467,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fabioglimb/even-toolkit"
+    "url": "git+https://github.com/fabioglimb/even-toolkit.git"
   },
   "homepage": "https://github.com/fabioglimb/even-toolkit#readme",
   "bugs": {

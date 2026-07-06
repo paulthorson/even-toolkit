@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.7.8
+
+Released: 2026-07-06
+
+No breaking changes. This release keeps the current `main` glasses page mode and adds optional helpers for richer G2 apps.
+
+### Added
+
+- New glasses canvas helpers and image-tile text builders for main/chart-like displays.
+- Optional device and location helpers exposed from `even-toolkit/device`, `even-toolkit/useDeviceInfo`, and `even-toolkit/useLocation`.
+- Optional voice routing/action layer exposed from `even-toolkit/voice` and `even-toolkit/voice/types`.
+- Split table, split pane, and image-tile scroll helpers in the glasses display builders.
+
+### Changed
+
+- `useGlasses` supports `mainImageTiles` and lazy optional voice integration while preserving apps that only use text/columns/split modes.
+- G2 image tile encoding now skips unchanged tile payloads to reduce repeated bridge traffic.
+
 ## 1.7.7
 
 Released: 2026-06-16
