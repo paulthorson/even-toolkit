@@ -22,6 +22,13 @@ export interface PaletteSwatch {
 /**
  * Okabe-Ito categorical palette — 8 colors, published order.
  * Use in this order for up to 8 series.
+ *
+ * Theme note: the 8th swatch is the published black (#000000), which is
+ * invisible on dark chart surfaces. The dark theme therefore maps the
+ * 8th position to white — see OKABE_ITO_DARK_HEX and
+ * --color-dataviz-8 in tokens-dark.css. This module's hex values are
+ * theme-agnostic (the light-theme set); for marks that follow the active
+ * theme, use themedCategoricalVar() or the --color-dataviz-N CSS vars.
  */
 export const OKABE_ITO: PaletteSwatch[] = [
   { name: 'orange', hex: '#E69F00', role: 'First categorical series; carries attention without implying good/bad.' },
@@ -31,11 +38,26 @@ export const OKABE_ITO: PaletteSwatch[] = [
   { name: 'blue', hex: '#0072B2', role: 'Fifth categorical series; deep anchor color.' },
   { name: 'vermillion', hex: '#D55E00', role: 'Sixth categorical series; warm emphasis that survives CVD.' },
   { name: 'reddish purple', hex: '#CC79A7', role: 'Seventh categorical series.' },
-  { name: 'black', hex: '#000000', role: 'Eighth categorical series; baseline/reference series.' },
+  { name: 'black', hex: '#000000', role: 'Eighth categorical series; baseline/reference series. Light surfaces only — invisible on dark charts; the dark theme substitutes white (see OKABE_ITO_DARK).' },
 ];
 
 /** Okabe-Ito as a plain hex array, in published order. */
 export const OKABE_ITO_HEX: string[] = OKABE_ITO.map((s) => s.hex);
+
+/**
+ * Dark-theme Okabe-Ito variant — identical to OKABE_ITO except the 8th
+ * swatch, where the published black (#000000) is replaced by white
+ * (#FFFFFF) so the 8th series stays visible on dark chart surfaces.
+ * Same CVD ordering guarantees; only the achromatic extreme is swapped.
+ */
+export const OKABE_ITO_DARK: PaletteSwatch[] = OKABE_ITO.map((swatch, i) =>
+  i === 7
+    ? { name: 'white', hex: '#FFFFFF', role: 'Eighth categorical series; dark-theme counterpart of the published black — keeps the 8th series visible on dark chart surfaces.' }
+    : swatch,
+);
+
+/** Dark-theme Okabe-Ito as a plain hex array, in published order. */
+export const OKABE_ITO_DARK_HEX: string[] = OKABE_ITO_DARK.map((s) => s.hex);
 
 /**
  * ColorBrewer Greens — 9 steps, light to dark.
@@ -75,8 +97,30 @@ export const DIVERGING_BLUE_ORANGE: string[] = [
 /**
  * Return the color for a series index, cycling through the palette.
  * Defaults to the Okabe-Ito categorical palette; accepts any scale.
+ *
+ * An empty palette is treated as "no palette given": it falls back to
+ * the default Okabe-Ito set instead of returning undefined.
+ * Note: this returns theme-agnostic hex values (the light-theme set).
+ * For marks that follow the active theme, use themedCategoricalVar().
  */
 export function categoricalColor(index: number, palette: readonly string[] = OKABE_ITO_HEX): string {
-  const n = palette.length;
-  return palette[((index % n) + n) % n];
+  const colors = palette.length > 0 ? palette : OKABE_ITO_HEX;
+  const n = colors.length;
+  return colors[((index % n) + n) % n];
+}
+
+/**
+ * Theme-aware fill for the default Okabe-Ito palette.
+ *
+ * Returns a `var(--color-dataviz-N)` reference (with the light-theme hex
+ * as fallback) instead of a fixed hex value, so the mark follows the
+ * active theme — including the dark-theme counterpart of the black 8th
+ * swatch. Usable anywhere a CSS color is accepted (SVG fill/stroke,
+ * inline styles). Only valid for the default 8-color set; custom
+ * palettes should use categoricalColor(), whose hex values are
+ * theme-agnostic and left exactly as provided.
+ */
+export function themedCategoricalVar(index: number): string {
+  const n = ((index % 8) + 8) % 8;
+  return `var(--color-dataviz-${n + 1}, ${OKABE_ITO_HEX[n]})`;
 }

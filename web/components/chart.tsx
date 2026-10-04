@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cn } from '../utils/cn';
-import { OKABE_ITO_HEX, categoricalColor } from '../dataviz/palettes';
+import { OKABE_ITO_HEX, categoricalColor, themedCategoricalVar } from '../dataviz/palettes';
 import {
   ResponsiveContainer,
   LineChart as RLineChart,
@@ -207,7 +207,10 @@ interface BarChartProps {
   width?: number;
   height?: number;
   color?: string;
-  /** Optional series palette; when set, bars cycle through it per item (Okabe-Ito by default). */
+  /** Optional series palette; when provided, bars cycle through it per item
+      (palette values are used as-is). When omitted, all bars use the single
+      `color` (default `--color-accent`) — the palette does not default to
+      Okabe-Ito here. */
   palette?: string[];
   horizontal?: boolean;
   showLabels?: boolean;
@@ -309,19 +312,26 @@ interface PieChartProps {
   size?: number;
   donut?: boolean;
   centerLabel?: string;
-  /** Optional slice palette; defaults to the Okabe-Ito categorical palette (CVD-safe). */
+  /** Optional slice palette; when omitted, defaults to the Okabe-Ito categorical
+      palette (CVD-safe) and follows the active theme via --color-dataviz-N
+      (8th slice: black on light, white on dark). A provided palette is used
+      as-is — its values are not adjusted for the theme. */
   palette?: string[];
   className?: string;
 }
 
 function PieChart({ data, size = 160, donut = false, centerLabel, palette, className }: PieChartProps) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
+  // Default palette is theme-aware: marks reference the --color-dataviz-N
+  // CSS vars so the 8th series resolves to black on light and white on
+  // dark. A caller-provided palette is used as-is (theme-agnostic hex).
+  const useThemeVars = palette == null;
   const paletteColors = palette ?? OKABE_ITO_HEX;
 
   const chartData = data.map((d, i) => ({
     name: d.label,
     value: d.value,
-    fill: d.color ?? categoricalColor(i, paletteColors),
+    fill: d.color ?? (useThemeVars ? themedCategoricalVar(i) : categoricalColor(i, paletteColors)),
   }));
 
   return (
@@ -355,11 +365,11 @@ function PieChart({ data, size = 160, donut = false, centerLabel, palette, class
       </div>
       {/* Legend */}
       <div className="flex flex-col gap-1.5 w-full max-w-xs">
-        {data.map((item, i) => (
+        {chartData.map((entry, i) => (
           <div key={i} className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color ?? categoricalColor(i, paletteColors) }} />
-            <span className="text-[13px] tracking-[-0.13px] text-text">{item.label}</span>
-            <span className="text-[11px] tracking-[-0.11px] text-text-dim ml-auto tabular-nums">{item.value}</span>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.fill }} />
+            <span className="text-[13px] tracking-[-0.13px] text-text">{entry.name}</span>
+            <span className="text-[11px] tracking-[-0.11px] text-text-dim ml-auto tabular-nums">{entry.value}</span>
           </div>
         ))}
       </div>

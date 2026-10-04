@@ -31,7 +31,9 @@
   --color-overlay: rgba(0,0,0,0.60);
   --color-input-bg: rgba(255,255,255,0.08);
 
-  /* Data Visualization (Okabe-Ito, CVD-safe — same in light and dark themes) */
+  /* Data Visualization (Okabe-Ito, CVD-safe — 1..7 identical in both
+     themes; 8 is black on light and white on dark so the 8th series
+     stays visible on either surface) */
   --color-dataviz-1: #E69F00; /* orange */
   --color-dataviz-2: #56B4E9; /* sky blue */
   --color-dataviz-3: #009E73; /* bluish green */
@@ -39,7 +41,7 @@
   --color-dataviz-5: #0072B2; /* blue */
   --color-dataviz-6: #D55E00; /* vermillion */
   --color-dataviz-7: #CC79A7; /* reddish purple */
-  --color-dataviz-8: #000000; /* black */
+  --color-dataviz-8: #FFFFFF; /* white — dark-theme counterpart of the published black 8th swatch */
 
   /* Layout */
   --radius-default: 6px;

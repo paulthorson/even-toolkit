@@ -31,7 +31,9 @@
   --color-overlay: rgba(0,0,0,0.50);      /* SC-1st */
   --color-input-bg: rgba(35,35,35,0.08);  /* SC-2nd */
 
-  /* Data Visualization (Okabe-Ito, CVD-safe — same in light and dark themes) */
+  /* Data Visualization (Okabe-Ito, CVD-safe — 1..7 identical in both
+     themes; 8 is black on light and white on dark so the 8th series
+     stays visible on either surface) */
   --color-dataviz-1: #E69F00; /* orange */
   --color-dataviz-2: #56B4E9; /* sky blue */
   --color-dataviz-3: #009E73; /* bluish green */

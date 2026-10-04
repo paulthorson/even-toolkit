@@ -17,12 +17,16 @@ Source: Okabe & Ito, "Color Universal Design" — https://jfly.uni-koeln.de/colo
 | 5 | Blue | `#0072B2` | Fifth categorical series |
 | 6 | Vermillion | `#D55E00` | Sixth categorical series |
 | 7 | Reddish purple | `#CC79A7` | Seventh categorical series |
-| 8 | Black | `#000000` | Eighth categorical series |
+| 8 | Black / white (theme-dependent) | `#000000` on light, `#FFFFFF` on dark | Eighth categorical series — the published black is invisible on dark surfaces, so the dark theme substitutes white |
 
 The same values are available as CSS custom properties
 `--color-dataviz-1` … `--color-dataviz-8` in `web/theme/tokens-light.css`
-and `web/theme/tokens-dark.css` (identical in both themes — the
-Okabe-Ito set is designed to hold on light and dark surfaces).
+and `web/theme/tokens-dark.css`. Swatches 1–7 are identical in both
+themes; swatch 8 is theme-dependent (`#000000` on light, `#FFFFFF` on
+dark) so the 8th series stays visible on either surface. Do not assume
+the hex exports in `palettes.ts` track the theme — `OKABE_ITO` /
+`OKABE_ITO_HEX` are the published (light) set; use
+`--color-dataviz-N` or `themedCategoricalVar()` for theme-aware marks.
 
 Also exported from `web/dataviz/palettes.ts`:
 
@@ -31,16 +35,28 @@ Also exported from `web/dataviz/palettes.ts`:
   ramp keeps companion charts feeling native on the G2 green display.
 - `DIVERGING_BLUE_ORANGE` — 7-step blue↔orange diverging scale with a
   neutral midpoint (endpoints are Okabe-Ito vermillion and blue).
-- `categoricalColor(index)` — returns the palette color for a series
-  index, cycling when there are more than 8.
+- `categoricalColor(index, palette?)` — returns the palette color for a
+  series index, cycling when there are more than 8. Defaults to the
+  Okabe-Ito set; an empty palette falls back to the default instead of
+  returning undefined. Returns theme-agnostic hex (the light-theme set).
+- `themedCategoricalVar(index)` — theme-aware variant for the default
+  palette: returns a `var(--color-dataviz-N)` reference (with a light
+  fallback) so the mark follows the active theme, including the
+  dark-theme white 8th swatch. Usable in SVG fill/stroke and inline
+  styles.
+- `OKABE_ITO_DARK` / `OKABE_ITO_DARK_HEX` — dark-theme variant of the
+  set: identical except the 8th swatch is white (`#FFFFFF`).
 
 ## Usage rules
 
 1. **Categorical data, up to 8 series:** use the Okabe-Ito palette in
-   published order, first series first. `PieChart` and `BarChart`
-   accept an optional `palette` prop; when omitted they default to
-   Okabe-Ito via `categoricalColor`. More than 8 series is a design
-   problem, not a palette problem — combine small series into an
+   published order, first series first. `PieChart` accepts an optional
+   `palette` prop and defaults to Okabe-Ito (theme-aware via
+   `--color-dataviz-N`); `BarChart` accepts an optional `palette` prop
+   but defaults to a single `--color-accent` fill — pass a palette
+   explicitly for per-bar colors. A caller-provided palette is used
+   as-is and is not adjusted for the theme. More than 8 series is a
+   design problem, not a palette problem — combine small series into an
    "Other" slice or split the chart before reaching for more colors.
 2. **Never encode by color alone.** Pair every color with a direct
    label, a legend entry that includes the value, a different marker
