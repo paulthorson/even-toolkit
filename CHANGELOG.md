@@ -4,12 +4,20 @@
 
 No breaking changes.
 
+### Fixed
+
+- Glass dataviz (`glasses/glass-dataviz.ts`): `distinctGreenLevels` no longer assigns level 0 (`#000000`) to a series — it is the canvas background, so the last series of every multi-series chart was invisible. The series pool is now the 9 quantization-distinct levels in the L1–L15 range; `GREEN_16` itself is unchanged. Docs in `glasses/GLASS-DATAVIZ.md` updated.
+- Glass dataviz line chart: left and right gutters are now sized from the measured label text instead of fixed pixel guesses, so 3-digit y-axis values no longer clip and endpoint labels (`"<label> <last value>"`) are no longer truncated.
+- `package.json`: declared `upng-js` (`^2.1.0`) in `dependencies` — `glasses/png-utils.ts` imports it for PNG encoding and consumers were hitting a module-not-found at runtime.
+
 ### Added
 
 - CVD-compliant data-visualization palettes in `even-toolkit/web/dataviz/palettes.ts`: the 8-color Okabe-Ito categorical palette (`OKABE_ITO`, `OKABE_ITO_HEX`, verified against the published set), a 9-step CVD-safe green sequential scale (`GREEN_SEQUENTIAL`, native to the G2 green display), a 7-step blue↔orange diverging scale (`DIVERGING_BLUE_ORANGE`), and a `categoricalColor(index)` helper. Rules documented in `even-toolkit/web/dataviz/DATAVIZ.md`.
 - `PieChart` accepts an optional `palette` prop and defaults to Okabe-Ito (theme-aware: the 8th slice resolves to black on light, white on dark, via `--color-dataviz-N`); `BarChart` accepts an optional `palette` prop but defaults to a single `--color-accent` fill (pass a palette explicitly for per-bar colors). The ad-hoc `COLORS` array in `chart.tsx` is replaced with Okabe-Ito via the new module (all existing props keep working).
 - `--color-dataviz-1` … `--color-dataviz-8` CSS custom properties in both `web/theme/tokens-light.css` and `tokens-dark.css` (swatches 1–7 identical; swatch 8 is theme-dependent: `#000000` on light, `#FFFFFF` on dark, so the 8th series stays visible in both themes). New `themedCategoricalVar(index)` helper returns `var(--color-dataviz-N)` references, and `OKABE_ITO_DARK`/`OKABE_ITO_DARK_HEX` export the dark-theme variant of the set.
 - `categoricalColor(index)` falls back to the default Okabe-Ito palette when passed an empty array instead of returning undefined.
+- Glasses-side dataviz builders in `glasses/glass-dataviz.ts` (new deep import `even-toolkit/glass-dataviz`): the `GREEN_16` 16-step green luminance scale plus `greenLevel`/`distinctGreenLevels` helpers; redundant-encoding pattern fills (`solid`, `hatch-diagonal`, `hatch-horizontal`, `dots`, `cross-hatch`) and shape markers (`circle`, `square`, `triangle`, `diamond`) so series are never encoded by luminance alone; and canvas builders `buildGlassBarChart`, `buildGlassSparkline`, `buildGlassLineChart`, `buildGlassDonut` returning offscreen canvases that feed the existing tile pipeline via `encodeDatavizTiles` (`encodeTilesBatch` -> `mainImageTiles`-shaped tiles). Labels are always rendered. Docs: `glasses/GLASS-DATAVIZ.md`.
+>>>>>>> feat/dataviz-glasses
 - Dashboard widgets: a widget registry in `even-toolkit/web` mirroring the icon registry idiom (`registerWidget`, `registerWidgets`, `getWidget`, `getWidgetNames`, async `registerAllWidgets`), plus a `Widget` renderer that renders a registered widget by name. Every widget receives the standard props `title`, `span`, and `className`. New deep import: `even-toolkit/web/widgets`.
 - Built-in widgets, all composed from existing components: `StatWidget` (registered as `'stat'`, from `StatCard`), `ChartWidget` (`'chart'`, bar or donut from `BarChart`/`PieChart` inside a `Card`), `ListWidget` (`'list'`, `ListItem` rows in a `Card`), and `TimelineWidget` (`'timeline'`, `Timeline` in a `Card`).
 - `DashboardLayout`: a responsive 12-column widget grid that renders registered widgets by name from a `widgets` slot list. Slot `span` is the number of grid columns (1-12, default 6, clamped) on `md` screens and up; below `md` every widget spans full width. New deep import: `even-toolkit/web/layouts`.
