@@ -31,6 +31,16 @@
   --color-overlay: rgba(0,0,0,0.50);      /* SC-1st */
   --color-input-bg: rgba(35,35,35,0.08);  /* SC-2nd */
 
+  /* Data Visualization (Okabe-Ito, CVD-safe — same in light and dark themes) */
+  --color-dataviz-1: #E69F00; /* orange */
+  --color-dataviz-2: #56B4E9; /* sky blue */
+  --color-dataviz-3: #009E73; /* bluish green */
+  --color-dataviz-4: #F0E442; /* yellow */
+  --color-dataviz-5: #0072B2; /* blue */
+  --color-dataviz-6: #D55E00; /* vermillion */
+  --color-dataviz-7: #CC79A7; /* reddish purple */
+  --color-dataviz-8: #000000; /* black */
+
   /* Layout */
   --radius-default: 6px;
   --spacing-margin: 12px;

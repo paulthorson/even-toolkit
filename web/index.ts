@@ -169,6 +169,10 @@ export type { CalendarProps, CalendarEvent, CalendarEventMove, CalendarView } fr
 export { Sparkline, LineChart, BarChart, PieChart, StatCard } from './components/chart';
 export type { SparklineProps, LineChartProps, LineChartPoint, BarChartProps, BarChartItem, PieChartProps, PieChartItem, StatCardProps } from './components/chart';
 
+// Data visualization palettes (CVD-compliant, Okabe-Ito based)
+export { OKABE_ITO, OKABE_ITO_HEX, GREEN_SEQUENTIAL, DIVERGING_BLUE_ORANGE, categoricalColor } from './dataviz/palettes';
+export type { PaletteSwatch } from './dataviz/palettes';
+
 // Phase 1C: Data visualization
 export { Timeline } from './components/timeline';
 export type { TimelineProps, TimelineEvent } from './components/timeline';

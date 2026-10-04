@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '../utils/cn';
+import { OKABE_ITO_HEX, categoricalColor } from '../dataviz/palettes';
 import {
   ResponsiveContainer,
   LineChart as RLineChart,
@@ -16,10 +17,6 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
-
-// ─── Colors ─────────────────────────────────────────────────────
-
-const COLORS = ['#232323', '#4BB956', '#FF453A', '#FEF991', '#7B7B7B', '#E4E4E4'];
 
 // ─── Custom Tooltip ─────────────────────────────────────────────
 
@@ -210,24 +207,26 @@ interface BarChartProps {
   width?: number;
   height?: number;
   color?: string;
+  /** Optional series palette; when set, bars cycle through it per item (Okabe-Ito by default). */
+  palette?: string[];
   horizontal?: boolean;
   showLabels?: boolean;
   className?: string;
 }
 
 function BarChart({
-  data, width = 300, height = 200, color,
+  data, width = 300, height = 200, color, palette,
   horizontal = false, showLabels = true, className,
 }: BarChartProps) {
   if (data.length === 0) return null;
 
   const defaultColor = color ?? 'var(--color-accent)';
-  const hasCustomColors = data.some((d) => d.color);
+  const hasCustomColors = data.some((d) => d.color) || palette != null;
 
-  const chartData = data.map((d) => ({
+  const chartData = data.map((d, i) => ({
     label: d.label,
     value: d.value,
-    fill: d.color ?? defaultColor,
+    fill: d.color ?? (palette ? categoricalColor(i, palette) : defaultColor),
   }));
 
   if (horizontal) {
@@ -310,16 +309,19 @@ interface PieChartProps {
   size?: number;
   donut?: boolean;
   centerLabel?: string;
+  /** Optional slice palette; defaults to the Okabe-Ito categorical palette (CVD-safe). */
+  palette?: string[];
   className?: string;
 }
 
-function PieChart({ data, size = 160, donut = false, centerLabel, className }: PieChartProps) {
+function PieChart({ data, size = 160, donut = false, centerLabel, palette, className }: PieChartProps) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
+  const paletteColors = palette ?? OKABE_ITO_HEX;
 
   const chartData = data.map((d, i) => ({
     name: d.label,
     value: d.value,
-    fill: d.color ?? COLORS[i % COLORS.length],
+    fill: d.color ?? categoricalColor(i, paletteColors),
   }));
 
   return (
@@ -355,7 +357,7 @@ function PieChart({ data, size = 160, donut = false, centerLabel, className }: P
       <div className="flex flex-col gap-1.5 w-full max-w-xs">
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color ?? COLORS[i % COLORS.length] }} />
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color ?? categoricalColor(i, paletteColors) }} />
             <span className="text-[13px] tracking-[-0.13px] text-text">{item.label}</span>
             <span className="text-[11px] tracking-[-0.11px] text-text-dim ml-auto tabular-nums">{item.value}</span>
           </div>
