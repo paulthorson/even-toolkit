@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+No breaking changes.
+
+### Added
+
+- Dashboard widgets: a widget registry in `even-toolkit/web` mirroring the icon registry idiom (`registerWidget`, `registerWidgets`, `getWidget`, `getWidgetNames`, async `registerAllWidgets`), plus a `Widget` renderer that renders a registered widget by name. Every widget receives the standard props `title`, `span`, and `className`. New deep import: `even-toolkit/web/widgets`.
+- Built-in widgets, all composed from existing components: `StatWidget` (registered as `'stat'`, from `StatCard`), `ChartWidget` (`'chart'`, bar or donut from `BarChart`/`PieChart` inside a `Card`), `ListWidget` (`'list'`, `ListItem` rows in a `Card`), and `TimelineWidget` (`'timeline'`, `Timeline` in a `Card`).
+- `DashboardLayout`: a responsive 12-column widget grid that renders registered widgets by name from a `widgets` slot list. Slot `span` is the number of grid columns (1-12, default 6, clamped) on `md` screens and up; below `md` every widget spans full width. New deep import: `even-toolkit/web/layouts`.
+- Docs: new "Dashboard Widgets and Layouts" section in `docs/component-guide.md` and a "Dashboard Widgets" pattern in `docs/patterns.md`.
+
 ## 1.7.8
 
 Released: 2026-07-06

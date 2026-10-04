@@ -9,6 +9,23 @@ export type { IconProps, IconComponent } from './icons/index';
 export { allIcons } from './icons/svg-icons';
 export { svgCatalog, svgIconNames, svgIconCount } from './icons/svg-catalog';
 
+// Dashboard widgets
+export { Widget, registerWidget, registerWidgets, registerAllWidgets, getWidget, getWidgetNames } from './widgets/index';
+export type { WidgetProps, WidgetComponent, WidgetRendererProps } from './widgets/index';
+export { allWidgets } from './widgets/built-in-widgets';
+export { StatWidget } from './widgets/stat-widget';
+export type { StatWidgetProps } from './widgets/stat-widget';
+export { ChartWidget } from './widgets/chart-widget';
+export type { ChartWidgetProps } from './widgets/chart-widget';
+export { ListWidget } from './widgets/list-widget';
+export type { ListWidgetProps, ListWidgetItem } from './widgets/list-widget';
+export { TimelineWidget } from './widgets/timeline-widget';
+export type { TimelineWidgetProps } from './widgets/timeline-widget';
+
+// Dashboard layouts
+export { DashboardLayout } from './layouts/index';
+export type { DashboardLayoutProps, DashboardWidgetSlot } from './layouts/index';
+
 // Primitives
 export { Button, buttonVariants } from './components/button';
 export type { ButtonProps } from './components/button';

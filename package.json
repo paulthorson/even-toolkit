@@ -209,6 +209,10 @@
       "types": "./dist/web/components/kbd.d.ts",
       "import": "./dist/web/components/kbd.js"
     },
+    "./web/layouts": {
+      "types": "./dist/web/layouts/index.d.ts",
+      "import": "./dist/web/layouts/index.js"
+    },
     "./web/divider": {
       "types": "./dist/web/components/divider.d.ts",
       "import": "./dist/web/components/divider.js"
@@ -352,6 +356,10 @@
     "./web/audio-player": {
       "types": "./dist/web/components/audio-player.d.ts",
       "import": "./dist/web/components/audio-player.js"
+    },
+    "./web/widgets": {
+      "types": "./dist/web/widgets/index.d.ts",
+      "import": "./dist/web/widgets/index.js"
     },
     "./web/scroll-picker": {
       "types": "./dist/web/components/scroll-picker.d.ts",

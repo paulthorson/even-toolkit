@@ -21,6 +21,7 @@ import { Button, Card, Badge /* ... */ } from 'even-toolkit/web';
 7. [Charts](#7-charts)
 8. [Data Visualization](#8-data-visualization)
 9. [Media and Input](#9-media-and-input)
+10. [Dashboard Widgets and Layouts](#10-dashboard-widgets-and-layouts)
 
 ---
 
@@ -1752,4 +1753,198 @@ import { AudioPlayer } from 'even-toolkit/web';
 
 ```tsx
 <AudioPlayer src="/audio/cooking-tip.mp3" title="Chef's Tip: Perfect Risotto" />
+```
+
+---
+
+## 10. Dashboard Widgets and Layouts
+
+A widget registry (mirroring the icon registry) plus a responsive dashboard layout that renders registered widgets by name.
+
+Register built-ins before rendering:
+
+```tsx
+import { registerAllWidgets } from 'even-toolkit/web';
+await registerAllWidgets();
+```
+
+### Widget registry
+
+`registerWidget(name, component)`, `registerWidgets({ name: component })`, `getWidget(name)`, `getWidgetNames()`, and `registerAllWidgets()` work exactly like their icon-registry counterparts (`registerIcon` / `registerIcons` / `getIconNames`). Every registered widget is a React component receiving the standard widget props: `title`, `span`, and `className`.
+
+```tsx
+import { registerWidget, StatWidget } from 'even-toolkit/web';
+registerWidget('my-stat', StatWidget);
+```
+
+### Widget
+
+Renders a registered widget by name. Extra `data` props are spread over the standard widget props.
+
+```tsx
+import { Widget } from 'even-toolkit/web';
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| name | `string` | required | Registered widget name |
+| title | `string` | -- | Widget title |
+| span | `number` | -- | Grid span hint, read by the dashboard layout |
+| data | `Record<string, unknown>` | -- | Widget-specific payload, spread over the widget props |
+| className | `string` | -- | Additional CSS classes |
+
+```tsx
+<Widget name="stat" title="Orders" span={6} data={{ value: 42, change: '+8%', trend: 'up' }} />
+```
+
+### StatWidget
+
+A KPI widget composed from `StatCard`: one big value, an optional change indicator, and an optional sparkline. Registered as `'stat'`.
+
+```tsx
+import { StatWidget } from 'even-toolkit/web';
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| label | `string` | `title` | Stat label (falls back to the widget title) |
+| value | `string \| number` | `'--'` | The stat value |
+| change | `string` | -- | Change text, e.g. `'+8%'` |
+| trend | `'up' \| 'down' \| 'neutral'` | -- | Colors the change text and sparkline |
+| sparklineData | `number[]` | -- | Data points for the sparkline |
+| title | `string` | -- | Standard widget prop; used as label fallback |
+| className | `string` | -- | Additional CSS classes |
+
+**When to use:** KPIs, counts, and single-number metrics on a dashboard.
+
+```tsx
+<StatWidget title="Recipes Cooked" value={42} change="+8 this week" trend="up" sparklineData={[30, 35, 32, 38, 42]} />
+```
+
+---
+
+### ChartWidget
+
+A bar or donut chart inside a card, with the widget title as the card heading. Composed from `Card`, `BarChart`, and `PieChart`. Registered as `'chart'`.
+
+```tsx
+import { ChartWidget } from 'even-toolkit/web';
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| kind | `'bar' \| 'pie'` | `'bar'` | Chart type |
+| data | `BarChartItem[] \| PieChartItem[]` | `[]` | Chart data points |
+| height | `number` | `180` | Chart height in px |
+| title | `string` | -- | Card heading |
+| className | `string` | -- | Additional CSS classes |
+
+**When to use:** Category breakdowns, weekly activity, any metric that reads better as a chart than a number.
+
+```tsx
+<ChartWidget
+  title="This Week"
+  kind="bar"
+  data={[
+    { label: 'Mon', value: 2 },
+    { label: 'Tue', value: 3 },
+    { label: 'Wed', value: 1 },
+  ]}
+/>
+```
+
+---
+
+### ListWidget
+
+A card containing a compact stack of `ListItem` rows, with the widget title as the card heading. Registered as `'list'`.
+
+```tsx
+import { ListWidget } from 'even-toolkit/web';
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| items | `ListWidgetItem[]` | `[]` | Array of `{ title: string; subtitle?: string; leading?: ReactNode; trailing?: ReactNode }` |
+| onItemPress | `(index: number) => void` | -- | Tap handler; rows are non-interactive when omitted |
+| title | `string` | -- | Card heading |
+| className | `string` | -- | Additional CSS classes |
+
+**When to use:** Top items, recent entries, short ranked lists on a dashboard.
+
+```tsx
+<ListWidget
+  title="Top Recipes"
+  items={[
+    { title: 'Pasta Carbonara', subtitle: 'Cooked 12 times', trailing: <span>4.9</span> },
+    { title: 'Thai Green Curry', subtitle: 'Cooked 8 times', trailing: <span>4.7</span> },
+  ]}
+  onItemPress={(i) => openRecipe(i)}
+/>
+```
+
+---
+
+### TimelineWidget
+
+A card wrapping a `Timeline` of events, with the widget title as the card heading. Registered as `'timeline'`.
+
+```tsx
+import { TimelineWidget } from 'even-toolkit/web';
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| events | `TimelineEvent[]` | `[]` | Array of `{ id: string; title: string; subtitle?: string; timestamp: string; color?: string; icon?: ReactNode }` |
+| title | `string` | -- | Card heading |
+| className | `string` | -- | Additional CSS classes |
+
+**When to use:** Recent activity feeds, event history, anything time-ordered.
+
+```tsx
+<TimelineWidget
+  title="Recent Activity"
+  events={[
+    { id: '1', title: 'Cooked Pasta Carbonara', timestamp: '2h ago', color: 'var(--color-positive)' },
+    { id: '2', title: 'Added new recipe', subtitle: 'Thai Green Curry', timestamp: '5h ago' },
+  ]}
+/>
+```
+
+---
+
+### DashboardLayout
+
+A responsive 12-column widget grid that renders registered dashboard widgets by name from a `widgets` slot list.
+
+```tsx
+import { DashboardLayout } from 'even-toolkit/web';
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| widgets | `DashboardWidgetSlot[]` | required | Array of `{ name: string; title?: string; span?: number; data?: Record<string, unknown>; className?: string }` |
+| className | `string` | -- | Additional CSS classes |
+
+Span semantics: `span` is the number of grid columns (1-12) the widget occupies on `md` screens and up. It is clamped to 1-12 and defaults to 6. Below the `md` breakpoint every widget spans all 12 columns (full width), so dashboards stay readable on narrow screens.
+
+**When to use:** Any dashboard screen. Declare the widgets once and let the layout place them.
+
+```tsx
+import { DashboardLayout, registerAllWidgets } from 'even-toolkit/web';
+
+function DashboardScreen() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => { registerAllWidgets().then(() => setReady(true)); }, []);
+  if (!ready) return null;
+
+  return (
+    <DashboardLayout widgets={[
+      { name: 'stat', title: 'Recipes Cooked', span: 6, data: { value: 42, change: '+8%', trend: 'up' } },
+      { name: 'stat', title: 'Total Time', span: 6, data: { value: '18h', change: '-2h', trend: 'down' } },
+      { name: 'chart', title: 'By Category', span: 6, data: { kind: 'pie', data: categoryData } },
+      { name: 'timeline', title: 'Recent Activity', span: 6, data: { events: activityEvents } },
+    ]} />
+  );
+}
 ```

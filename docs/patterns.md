@@ -25,7 +25,8 @@ import {
 5. [Wizard (Multi-Step)](#wizard-page)
 6. [Dialog Flow](#dialog-flow)
 7. [Dashboard Page](#dashboard-page)
-8. [Chat / AI Page](#chat-page)
+8. [Dashboard Widgets](#dashboard-widgets)
+9. [Chat / AI Page](#chat-page)
 
 ---
 
@@ -578,6 +579,54 @@ function DashboardScreen() {
   );
 }
 ```
+
+---
+
+## Dashboard Widgets
+
+The same dashboard as above, rebuilt with the widget registry and `DashboardLayout`. Widgets are registered by name (`stat`, `chart`, `list`, `timeline`), so the dashboard body is just a slot list — teams can add custom widgets without touching the layout.
+
+```tsx
+import {
+  DashboardLayout, registerAllWidgets, registerWidget, StatWidget, WidgetProps,
+} from 'even-toolkit/web';
+
+// Custom widget: register it like an icon, then use it by name.
+function CustomWidget({ title, data }: WidgetProps & { data?: { text?: string } }) {
+  return (
+    <Card>
+      <div className="text-[15px] text-text mb-2">{title}</div>
+      <div className="text-[13px] text-text-dim">{data?.text}</div>
+    </Card>
+  );
+}
+registerWidget('custom', CustomWidget);
+
+function DashboardScreen() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => { registerAllWidgets().then(() => setReady(true)); }, []);
+  if (!ready) return null;
+
+  return (
+    <Page>
+      <ScreenHeader title="Dashboard" subtitle="Your cooking overview" />
+
+      <div className="px-3">
+        <DashboardLayout widgets={[
+          { name: 'stat', title: 'Recipes Cooked', span: 6, data: { value: 42, change: '+8 this week', trend: 'up', sparklineData: [30, 35, 32, 38, 42] } },
+          { name: 'stat', title: 'Total Time', span: 6, data: { value: '18h', change: '-2h vs last week', trend: 'down', sparklineData: [22, 20, 21, 19, 20, 18] } },
+          { name: 'chart', title: 'By Category', span: 6, data: { kind: 'pie', data: categoryData } },
+          { name: 'list', title: 'Top Recipes', span: 6, data: { items: topRecipes } },
+          { name: 'timeline', title: 'Recent Activity', span: 12, data: { events: activityEvents } },
+          { name: 'custom', title: 'Notes', span: 12, data: { text: 'Shopping list goes here' } },
+        ]} />
+      </div>
+    </Page>
+  );
+}
+```
+
+**Span semantics:** `span` is the number of grid columns (1-12) the widget takes on `md` screens and up; it is clamped to 1-12 and defaults to 6. Below the `md` breakpoint every widget spans all 12 columns (full width).
 
 ---
 
