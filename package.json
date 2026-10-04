@@ -133,6 +133,10 @@
       "types": "./dist/glasses/glass-canvas.d.ts",
       "import": "./dist/glasses/glass-canvas.js"
     },
+    "./glass-dataviz": {
+      "types": "./dist/glasses/glass-dataviz.d.ts",
+      "import": "./dist/glasses/glass-dataviz.js"
+    },
     "./device": {
       "types": "./dist/glasses/device.d.ts",
       "import": "./dist/glasses/device.js"
