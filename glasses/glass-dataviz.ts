@@ -54,13 +54,17 @@ function quantizedGreyIndex(hex: string): number {
 
 /**
  * Pick `count` GREEN_16 levels whose post-quantization greys are all
- * distinct, spread across the range, brightest first. When more than 10
- * series are requested the levels repeat — patterns, markers and labels
- * still keep them distinguishable.
+ * distinct, spread across the range, brightest first. Level 0 (`#000000`)
+ * is NEVER assigned: it is the canvas background ("the field"), so a
+ * series drawn at L0 would be invisible. The pool is therefore the 9
+ * quantization-distinct levels in the L1-L15 range (L1 itself collapses
+ * into L2's grey after quantization). When more
+ * than 9 series are requested the levels repeat — patterns, markers and
+ * labels still keep them distinguishable.
  */
 export function distinctGreenLevels(count: number): number[] {
   const distinct: number[] = [];
-  for (let level = 15; level >= 0; level--) {
+  for (let level = 15; level >= 1; level--) {
     if (distinct.length === 0 || quantizedGreyIndex(greenLevel(level)) !== quantizedGreyIndex(greenLevel(distinct[distinct.length - 1]!))) {
       distinct.push(level);
     }
@@ -282,7 +286,9 @@ export interface SeriesStyle {
 
 /**
  * Assign every series a luminance step + pattern + marker. Series 0 gets
- * the brightest level. This is the single place where the
+ * the brightest level. Level 0 (black) is reserved for the background and
+ * is never assigned, so every series is visible against the field. This
+ * is the single place where the
  * never-encode-by-luminance-alone rule is enforced for multi-series charts.
  */
 export function assignSeriesStyles(count: number): SeriesStyle[] {
@@ -421,15 +427,6 @@ function renderLineChart(ctx: CanvasRenderingContext2D, opts: LineChartOptions, 
     axes = true,
   } = opts;
 
-  const padL = axes ? 30 : 4;
-  const padR = 56; // room for endpoint labels
-  const padB = axes ? 14 : 4;
-  const padT = title ? 20 : 6;
-  const plotX = padL, plotW = width - padL - padR;
-  const plotY = padT, plotH = height - padT - padB;
-
-  if (title) drawText(ctx, title, 4, 13, { size: 13, color: GREEN_16[15]!, maxWidth: width - 8 });
-
   const nSer = series.length;
   const nPts = Math.max(1, ...series.map((s) => s.values.length));
   const allValues = series.flatMap((s) => s.values);
@@ -438,6 +435,37 @@ function renderLineChart(ctx: CanvasRenderingContext2D, opts: LineChartOptions, 
   if (yMax - yMin < 1e-9) { yMin -= 1; yMax += 1; }
   const spanPad = (yMax - yMin) * 0.08;
   yMin -= spanPad; yMax += spanPad;
+
+  // Size the gutters from the actual label text instead of fixed pixel
+  // guesses: y-axis tick labels (size 10) on the left, endpoint
+  // "label + last value" labels (size 11) on the right. Fixed guesses
+  // clipped 3-digit tick values ("127.44" lost its first digit at padL=30)
+  // and truncated endpoint labels to ~5 chars at 38 px.
+  ctx.font = `10px ${FONT_FAMILY}`;
+  const tickLabels = axes
+    ? [0, 0.5, 1].map((t) => formatValue(yMin + t * (yMax - yMin)))
+    : [];
+  const maxTickW = Math.max(0, ...tickLabels.map((t) => ctx.measureText(t).width));
+  const padL = axes ? Math.ceil(maxTickW) + 10 : 4;
+
+  ctx.font = `11px ${FONT_FAMILY}`;
+  const endpointLabels = series.map(
+    (s) => `${s.label} ${formatValue(s.values[s.values.length - 1] ?? 0)}`,
+  );
+  const maxEndpointW = Math.max(0, ...endpointLabels.map((t) => ctx.measureText(t).width));
+  // Marker at +8, text at +14, small right margin; never below the old
+  // 56 px, never more than 45% of the canvas so the plot keeps its room.
+  const padR = Math.min(
+    Math.floor(width * 0.45),
+    Math.max(56, Math.ceil(18 + maxEndpointW)),
+  );
+
+  const padB = axes ? 14 : 4;
+  const padT = title ? 20 : 6;
+  const plotX = padL, plotW = width - padL - padR;
+  const plotY = padT, plotH = height - padT - padB;
+
+  if (title) drawText(ctx, title, 4, 13, { size: 13, color: GREEN_16[15]!, maxWidth: width - 8 });
 
   const xAt = (i: number) => plotX + (nPts === 1 ? plotW / 2 : (i / (nPts - 1)) * plotW);
   const yAt = (v: number) => plotY + plotH - ((v - yMin) / (yMax - yMin)) * plotH;

@@ -488,6 +488,7 @@
   "dependencies": {
     "@evenrealities/pretext": "^0.1.4",
     "react-is": "^19.2.4",
-    "recharts": "^3.8.0"
+    "recharts": "^3.8.0",
+    "upng-js": "^2.1.0"
   }
 }

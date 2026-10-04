@@ -4,6 +4,12 @@
 
 No breaking changes.
 
+### Fixed
+
+- Glass dataviz (`glasses/glass-dataviz.ts`): `distinctGreenLevels` no longer assigns level 0 (`#000000`) to a series — it is the canvas background, so the last series of every multi-series chart was invisible. The series pool is now the 9 quantization-distinct levels in the L1–L15 range; `GREEN_16` itself is unchanged. Docs in `glasses/GLASS-DATAVIZ.md` updated.
+- Glass dataviz line chart: left and right gutters are now sized from the measured label text instead of fixed pixel guesses, so 3-digit y-axis values no longer clip and endpoint labels (`"<label> <last value>"`) are no longer truncated.
+- `package.json`: declared `upng-js` (`^2.1.0`) in `dependencies` — `glasses/png-utils.ts` imports it for PNG encoding and consumers were hitting a module-not-found at runtime.
+
 ### Added
 
 - Glasses-side dataviz builders in `glasses/glass-dataviz.ts` (new deep import `even-toolkit/glass-dataviz`): the `GREEN_16` 16-step green luminance scale plus `greenLevel`/`distinctGreenLevels` helpers; redundant-encoding pattern fills (`solid`, `hatch-diagonal`, `hatch-horizontal`, `dots`, `cross-hatch`) and shape markers (`circle`, `square`, `triangle`, `diamond`) so series are never encoded by luminance alone; and canvas builders `buildGlassBarChart`, `buildGlassSparkline`, `buildGlassLineChart`, `buildGlassDonut` returning offscreen canvases that feed the existing tile pipeline via `encodeDatavizTiles` (`encodeTilesBatch` -> `mainImageTiles`-shaped tiles). Labels are always rendered. Docs: `glasses/GLASS-DATAVIZ.md`.

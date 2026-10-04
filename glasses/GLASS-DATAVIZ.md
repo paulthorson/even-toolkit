@@ -21,6 +21,11 @@ two-digit hex of that intensity:
 `greenLevel(L)` clamps any number to 0–15 and returns the matching hex.
 `distinctGreenLevels(n)` returns `n` levels whose greys stay distinct
 *after* the tile pipeline quantizes them (see below), brightest first.
+Level 0 (`#000000`) is never assigned to a series — it is the canvas
+background, so the series pool is the 9 quantization-distinct levels in the
+L1–L15 range (L1 itself collapses into L2's grey after quantization);
+every assigned series stays visible against the field. `GREEN_16` itself
+still holds all 16 levels.
 
 One practical caveat: `png-utils` quantizes every pixel to 16 grey steps
 before PNG encoding, and only **10 of the 16 green steps survive that as
